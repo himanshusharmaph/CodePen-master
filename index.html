@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css2?family=Galada&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://kit.fontawesome.com/d18e4c48d4.js" crossorigin="anonymous"></script>
+    <title>COVID-19 TESTER</title>
+    <link rel="stylesheet" href="index.css">
+  </head>
+  <body>
+      <div class="container-fluid p-0 m-0">
+      <div class="container">
+          <div class="row justify-content-center" id="input">
+          <input type="text" class="input" placeholder="Search COVID In Your City">
+          <div class="inputbtn" id="search"><i class="fas fa-lg fa-search" style="margin-top: 20px; color: white;"></i></div>
+        </div>
+
+          </div>
+         
+          <div id="container">
+
+          </div>
+          
+      </div>
+    </div>
+      <div id="map"></div>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDkE91hFqzV-g45mOcBN5-ypHa3TLyfeOs&callback=initMap"
+    async defer></script>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha384-J6qa4849blE2+poT4WnyKhv5vZF5SrPo0iEjwBvKU7imGFAV0wwj1yYfoRSJoZ+n" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+    <script>
+    
+
+
+
+
+function getDatas(placej,contentString,infoWindow,map,marker,callback){
+    fetch("https://api.covid19india.org/data.json")
+    .then((datax)=>datax.json())
+    .then(
+        (dataxj)=>{
+          let state;
+          if(placej.results[0].address_components[0].types[0]=="locality"){
+            state=placej.results[0].address_components[2].long_name;
+          }
+          else if(placej.results[0].address_components[0].types[0]=="administrative_area_level_1"){
+            state=placej.results[0].address_components[0].long_name;
+          }
+          if(state){
+          let cordata={};
+            console.log(dataxj);
+            regexstate=new RegExp(state,"ig");
+            dataxj.statewise.forEach((state1)=>{
+                if(state1.state.match(regexstate)){
+                    cordata.active=state1.active;
+                    cordata.confirmed=state1.confirmed;
+                    cordata.deaths=state1.deaths;
+                    cordata.recovered=state1.recovered;
+                }
+            });
+            contentString+="<p><ul><b>State: "+ state+"</b><li><b>Active: </b>"+cordata.active+"</li><li><b>Confirmed: </b>"+cordata.confirmed+"</li><li><b>Deaths: </b>"+cordata.deaths+"</li><li><b>Recovered: </b>"+cordata.recovered+"</li></ul></p>";}
+            callback(placej,contentString,infoWindow,map,marker);
+
+        })
+        
+}
+function getDatac(placej,contentString,infoWindow,map,marker,callback1,callback2){
+  let country;
+  if(placej.results[0].address_components[0].types[0]=="country"){
+    country=placej.results[0].address_components[0].long_name;
+  }
+  else if(placej.results[0].address_components[0].types[0]=="locality"){
+    if(country=placej.results[0].address_components[3]==undefined){
+      country=placej.results[0].address_components[2].long_name
+    }
+    else{
+    country=placej.results[0].address_components[3].long_name;}
+  }
+  else if(placej.results[0].address_components[0].types[0]=="administrative_area_level_1"){
+    country=placej.results[0].address_components[1].long_name;
+  }
+    
+    fetch("https://api.covid19api.com/total/country/"+country)
+    .then((datax)=>datax.json())
+    .then(
+        (dataxj)=>{
+            let cordata={};
+                    cordata.active=dataxj[dataxj.length-1].Active;
+                    cordata.confirmed=dataxj[dataxj.length-1].Confirmed;
+                    cordata.deaths=dataxj[dataxj.length-1].Deaths;
+                    cordata.recovered=dataxj[dataxj.length-1].Recovered;
+                    contentString+="<p><ul><b>Country: "+ country+"</b><li><b>Active: </b>"+cordata.active+"</li><li><b>Confirmed: </b>"+cordata.confirmed+"</li><li><b>Deaths: </b>"+cordata.deaths+"</li><li><b>Recovered: </b>"+cordata.recovered+"</li></ul></p>";
+                    callback1(placej,contentString,infoWindow,map,marker,callback2);
+        });
+
+        
+}
+function getDatad(placej,contentString,infoWindow,map,marker){
+  fetch("https://api.covid19india.org/state_district_wise.json")
+  .then(function(res){
+      return res.json();
+  })
+  .then(function(data){
+      let cordata={};
+      let locality;
+      let state;
+      if(placej.results[0].address_components[0].types[0]=="locality"){
+        locality=placej.results[0].address_components[1].long_name;
+        state=placej.results[0].address_components[2].long_name;
+        if(data[state]==undefined){
+          locality=placej.results[0].address_components[0].long_name;
+          state=placej.results[0].address_components[1].long_name;
+        }
+        else if(data[state].districtData[locality]==undefined){
+          locality=placej.results[0].address_components[0].long_name;
+        }
+        
+      }
+      else if(placej.results[0].address_components[0].types[0]=="administrative_area_level_1"){
+        locality=null;
+        state=placej.results[0].address_components[0].long_name;
+      }
+      else if(placej.results[0].address_components[0].types[0]=="country"){
+        locality=null;
+        state=null;
+      }
+      if(locality){
+      cordata.active=data[state].districtData[locality].active;
+      cordata.confirmed=data[state].districtData[locality].confirmed;
+      cordata.deaths=data[state].districtData[locality].deceased;
+      cordata.recovered=data[state].districtData[locality].recovered;
+      contentString+="<p><ul><b>Locality: "+ locality+"</b><li><b>Active: </b>"+cordata.active+"</li><li><b>Confirmed: </b>"+cordata.confirmed+"</li><li><b>Deaths: </b>"+cordata.deaths+"</li><li><b>Recovered: </b>"+cordata.recovered+"</li></ul></p>";}
+      infoWindow.setContent(contentString);
+      infoWindow.open(map, marker);
+  });
+
+}
+
+
+
+
+
+//   let map;
+let lat=20.5937;
+let lng=78.9629;
+function initMap(){
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: {lat: lat, lng: lng},
+    zoom: 5
+  });
+  let markers=[];
+  google.maps.event.addDomListener(document.getElementById("search"), 'click', ()=> {
+      fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${document.querySelector("input").value}&key=AIzaSyDkE91hFqzV-g45mOcBN5-ypHa3TLyfeOs`)
+      .then((place)=>place.json())
+      .then((placej)=>{
+        for(let i=0;i<markers.length;i++){
+          markers[i].setMap(null);
+        }
+          console.log(placej);
+          let latf=placej.results[0].geometry.location.lat;
+          let lngf=placej.results[0].geometry.location.lng;
+          renderLocation(latf,lngf,placej);
+          var contentString = '<div id="content" class="infowindow">'+'<h1 class="text-center">COVID-19 STATS</h1>';
+          let infoWindow = new google.maps.InfoWindow({
+              height:5,
+              content:contentString,
+              maxWidth:250,
+          });
+          let num=0;
+          let marker = new google.maps.Marker({
+          position: {lat:latf,lng:lngf},
+          map: map,
+          title: 'COVID DATA'
+          });
+          markers.push(marker);
+          marker.addListener('click', function() {
+              if(num%2==0){
+                getDatac(placej,contentString,infoWindow,map,marker,getDatas,getDatad);
+          }
+          else{
+              infoWindow.close(map, marker);
+          }
+          num++;
+          });
+          
+      });
+
+  });
+  google.maps.event.addDomListener(document.querySelector("input"), 'keydown', (event)=> {
+    if(event.which==13){
+      fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${document.querySelector("input").value}&key=AIzaSyDkE91hFqzV-g45mOcBN5-ypHa3TLyfeOs`)
+      .then((place)=>place.json())
+      .then((placej)=>{
+        for(let i=0;i<markers.length;i++){
+          markers[i].setMap(null);
+        }
+          console.log(placej);
+          let latf=placej.results[0].geometry.location.lat;
+          let lngf=placej.results[0].geometry.location.lng;
+          renderLocation(latf,lngf,placej);
+          var contentString = '<div id="content" class="infowindow">'+'<h1 class="text-center">COVID-19 STATS</h1>';
+          let infoWindow = new google.maps.InfoWindow({
+              height:5,
+              content:contentString,
+              maxWidth:250,
+          });
+          let num=0;
+          let marker = new google.maps.Marker({
+          position: {lat:latf,lng:lngf},
+          map: map,
+          title: 'Uluru (Ayers Rock)'
+          });
+          markers.push(marker);
+          marker.addListener('click', function() {
+              if(num%2==0){
+                getDatac(placej,contentString,infoWindow,map,marker,getDatas,getDatad);
+          }
+          else{
+              infoWindow.close(map, marker);
+          }
+          num++;
+          });
+          
+      });
+
+  }});
+}
+function renderLocation(latf,lngf,placej){
+    lat=latf;
+    lng=lngf;
+    map.setCenter(new google.maps.LatLng(lat,lng));
+    if(placej.results[0].types[0]=="administrative_area_level_1"){
+        map.setZoom(7);
+    }
+    else if(placej.results[0].types[0]=="country"){
+        map.setZoom(4);
+    }
+    else if(placej.results[0].types[0]=="continent"){
+        map.setZoom(3);
+    }
+    else{
+    map.setZoom(9);}
+    
+}
+
+    </script>
+  </body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
